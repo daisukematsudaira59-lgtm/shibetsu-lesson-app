@@ -1340,8 +1340,10 @@ function toggleHelp(force){
 }
 function toggleFull(){
   try {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-    else document.exitFullscreen();
+    const p = (!document.fullscreenElement)
+      ? document.documentElement.requestFullscreen()
+      : document.exitFullscreen();
+    if (p && p.catch) p.catch(() => {});   /* 全画面が つかえない ときも エラーに しない */
   } catch (e) {}
 }
 
