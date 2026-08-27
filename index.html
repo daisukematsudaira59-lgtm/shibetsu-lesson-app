@@ -339,6 +339,97 @@ footer.brand{
 .help-card td.k{color:var(--blue)}
 .help-card .close{margin-top:2vh;font-size:var(--fs-body);color:var(--sub)}
 .hidden{display:none !important}
+
+/* ============================================================
+   スマホ・タブレットで 見るとき だけの ちょうせい
+   （教室の プロジェクター＝よこ長の 大きい画面には えいきょう しません）
+   ============================================================ */
+@media (max-width:900px), (max-height:540px){
+  :root{
+    --fs-small: clamp(11px,2.6vw,20px);
+    --fs-body:  clamp(15px,4.6vw,28px);
+    --fs-lead:  clamp(17px,5.0vw,32px);
+    --fs-choice:clamp(17px,5.2vw,34px);
+    --fs-title: clamp(22px,6.6vw,44px);
+    --r:16px;
+  }
+  .screen{padding:12px 14px 70px;overflow-y:auto;overflow-x:hidden}
+  .screen-head{flex-wrap:wrap;gap:6px}
+  .body-area{gap:10px;justify-content:flex-start;padding-top:6px}
+  .btn{padding:.5em 1.1em;box-shadow:0 3px 0 rgba(0,0,0,.18)}
+  .controls{gap:10px;padding-top:10px}
+  .controls input{width:auto;flex:1 1 150px;min-width:0}
+  .key-hint{display:none}
+
+  /* トップ：メニューは たて 1れつ、文字は おりかえす */
+  #screen-top{padding-top:16px;justify-content:flex-start}
+  .menu{grid-template-columns:1fr;width:100%;max-width:none;gap:10px;margin-top:18px}
+  .menu-card{white-space:normal;font-size:var(--fs-lead);padding:12px 14px;gap:10px}
+  .menu-card .tx{overflow:visible;text-overflow:clip}
+  .menu-card .ico{font-size:1.3em}
+  #resume-row{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+  #resume-row .btn{margin-left:0 !important}
+
+  /* クイズ：えらぶボタンは たて 1れつ、名前は おりかえす */
+  .q-stage{gap:14px}
+  .q-pic{width:24vw;height:24vw;min-width:24vw;font-size:15vw}
+  .choices{grid-template-columns:1fr;gap:8px}
+  .choice{padding:8px 10px;gap:8px}
+  .choice .clabel{white-space:normal}
+  .choice.correct{box-shadow:0 0 0 5px rgba(46,158,91,.22)}
+  .answer-box{padding:10px 12px}
+  .chart{gap:6px}
+  .bar-name .e{font-size:1.6em}
+
+  /* とうひょう */
+  .vote-row{gap:8px}
+  .vote-label{flex:0 0 38%;white-space:normal;line-height:1.15}
+  .vote-track{height:1.5em}
+  .vote-num{min-width:2.8em}
+
+  /* ゲーム：キャンバスが つぶれないように 高さを かくほ */
+  #game-wrap{min-height:52vh}
+  .game-menu{flex-direction:column;align-items:center;gap:10px}
+
+  /* 人の数 */
+  .pop-num{font-size:clamp(34px,12vw,72px)}
+  .person{font-size:clamp(9px,2.7vw,18px)}
+  .people{gap:2px}
+
+  .help-card{padding:18px 16px}
+  .help-card td{padding:3px 10px 3px 0;white-space:normal}
+}
+
+/* はばが せまい ときは、とうひょうの ぼうグラフを 名前の下に 出す */
+@media (max-width:600px){
+  .vote-row{flex-wrap:wrap;row-gap:3px}
+  .vote-label{flex:1 1 auto;min-width:0;order:1;font-size:clamp(13px,3.9vw,22px);white-space:normal}
+  .vote-key{font-size:clamp(13px,3.9vw,22px)}
+  .vote-num{font-size:clamp(13px,3.9vw,22px);min-width:2.4em}
+  .vote-num{order:2}
+  .vote-row .pm{order:3}
+  .vote-track{order:4;flex:1 1 100%;height:1.1em}
+}
+
+/* スマホを よこ向きに したとき（せが ひくい 画面）は 2れつの ままで 小さく */
+@media (max-height:540px) and (min-aspect-ratio:1/1){
+  :root{
+    --fs-small: clamp(10px,2.0vh,16px);
+    --fs-body:  clamp(14px,3.6vh,24px);
+    --fs-lead:  clamp(15px,3.9vh,26px);
+    --fs-choice:clamp(15px,4.3vh,28px);
+    --fs-title: clamp(20px,5.6vh,36px);
+  }
+  .screen{padding:8px 12px 56px}
+  .body-area{justify-content:center;padding-top:0}
+  #screen-top{padding-top:8px;justify-content:center}
+  .menu{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px;gap:8px}
+  .menu-card{padding:8px 12px}
+  .choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .q-pic{width:15vh;height:15vh;min-width:15vh;font-size:10vh}
+  #game-wrap{min-height:0}
+  .people{gap:1px}
+}
 </style>
 </head>
 <body>
@@ -986,6 +1077,10 @@ const Vote = {
 };
 
 /* ======================= パッカー車ミニゲーム ========================== */
+/* キーボードの ない 画面（スマホ・タブレット）かどうか */
+function touchOnly(){
+  return window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}
 function pill(c, x, y, w, h, color){
   const r = h / 2;
   c.beginPath();
@@ -1012,7 +1107,9 @@ const Game = {
     this.cv = $("#game-canvas");
     this.ctx = this.cv.getContext("2d");
     this.resize();
-    this.showMenu("パッカー車を うごかして、車の うえに 出た ごみを あつめよう！", "");
+    this.showMenu(touchOnly()
+      ? "パッカー車を ゆびで うごかして、車の うえに 出た ごみを あつめよう！"
+      : "パッカー車を うごかして、車の うえに 出た ごみを あつめよう！", "");
     this.items = []; this.piles = []; this.score = 0;
     this.truckX = this.W / 2;
     this.draw();
@@ -1060,7 +1157,7 @@ const Game = {
     this.targetLeft = DATA.game.targetChangeSeconds;
     this.timeLeft = (mode === "play") ? DATA.game.playSeconds : DATA.game.watchSeconds;
     $("#game-badge").textContent = (mode === "play")
-      ? "← → で パッカー車を うごかそう"
+      ? (touchOnly() ? "ゆびで 左右に うごかそう" : "← → で パッカー車を うごかそう")
       : "ごみを あつめる人が いない まちを 見てみよう";
     this.hideMenu();
     Sound.whistle();
@@ -1082,7 +1179,7 @@ const Game = {
       this.showMenu("ごみを あつめる人が いないと、まちは どうなるかな？", "まちが ごみで いっぱいに…", true);
       Sound.wrong();
     }
-    $("#game-badge").textContent = "Space で もう いちど";
+    $("#game-badge").textContent = touchOnly() ? "もう いちど あそべます" : "Space で もう いちど";
   },
 
   loop(now){
@@ -1186,7 +1283,7 @@ const Game = {
     /* パッカー車 */
     this.drawTruck(this.truckX, this.H - this.roadH(), this.mode === "watch" && this.running);
     /* 上の おび（てんすう と のこり時間） */
-    const fsz = Math.max(16, this.H * 0.058);
+    const fsz = Math.max(11, Math.min(this.H * 0.058, this.W * 0.045));
     const barH = fsz * 1.9;
     c.fillStyle = "rgba(255,255,255,.88)";
     c.fillRect(0, 0, this.W, barH);
@@ -1203,10 +1300,15 @@ const Game = {
     if (this.mode === "play"){
       const tg = DATA.game.items[this.target];
       const label = "いま あつめるのは " + tg.emoji + " " + tg.label + "！";
-      c.font = "800 " + fsz + 'px "Yu Gothic UI","Meiryo",sans-serif';
+      let lf = fsz;
+      c.font = "800 " + lf + 'px "Yu Gothic UI","Meiryo",sans-serif';
+      while (lf > 9 && c.measureText(label).width > this.W * 0.88){
+        lf -= 1;
+        c.font = "800 " + lf + 'px "Yu Gothic UI","Meiryo",sans-serif';
+      }
       const tw = c.measureText(label).width;
-      const ph = fsz * 1.8, py = barH + fsz * 0.5;
-      pill(c, this.W / 2 - tw / 2 - fsz * 0.7, py, tw + fsz * 1.4, ph, "#2E9E5B");
+      const ph = lf * 1.8, py = barH + fsz * 0.5;
+      pill(c, this.W / 2 - tw / 2 - lf * 0.7, py, tw + lf * 1.4, ph, "#2E9E5B");
       c.fillStyle = "#FFFFFF";
       c.textAlign = "center";
       c.fillText(label, this.W / 2, py + ph / 2);
@@ -1215,7 +1317,7 @@ const Game = {
     if (this.msgLeft > 0){
       c.textAlign = "center";
       c.fillStyle = this.msg.indexOf("ちがう") >= 0 ? "#D9534F" : "#2E9E5B";
-      c.font = "800 " + (Math.max(16, this.H * 0.058) * 1.25) + 'px "Yu Gothic UI","Meiryo",sans-serif';
+      c.font = "800 " + (Math.max(11, Math.min(this.H * 0.058, this.W * 0.045)) * 1.25) + 'px "Yu Gothic UI","Meiryo",sans-serif';
       c.globalAlpha = clamp(this.msgLeft / 0.9, 0, 1);
       c.fillText(this.msg, clamp(this.truckX, this.W * 0.16, this.W * 0.84),
                  this.H - this.roadH() - this.truckH() * 1.5);
