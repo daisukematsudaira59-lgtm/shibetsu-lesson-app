@@ -712,7 +712,36 @@ function show(name){
   if (name === "vote") Vote.enter();
   if (name === "game") Game.enter();
   if (name === "pop") Pop.enter();
+  syncHash(name);
 }
+
+/* ---- スライドの ボタンから ひらく しくみ ----------------------------
+   PowerPoint の「▶ アプリ：〇〇」ボタンは app/index.html#quiz のような
+   リンクに なっています。その #〇〇 を 見て、さいしょから その画面を 出します。
+   ブラウザを 開いたまま 別の ボタンを おしたときも、画面が きりかわります。
+--------------------------------------------------------------------- */
+const HASH_SCREEN = {
+  quiz:"quiz", clue:"quiz",
+  vote:"vote",
+  game:"game", packer:"game",
+  pop:"pop", population:"pop", people:"pop",
+  top:"top", menu:"top"
+};
+const SCREEN_HASH = { quiz:"quiz", vote:"vote", game:"game", pop:"population", top:"top" };
+function screenFromHash(){
+  const key = decodeURIComponent((location.hash || "").replace(/^#/, "")).trim().toLowerCase();
+  return HASH_SCREEN[key] || "";
+}
+function syncHash(name){
+  const want = "#" + (SCREEN_HASH[name] || name);
+  if (location.hash === want) return;
+  try { history.replaceState(null, "", want); }
+  catch (e) { location.hash = want.slice(1); }   /* つかえない ブラウザでは ふつうに セット */
+}
+window.addEventListener("hashchange", () => {
+  const s = screenFromHash();
+  if (s && s !== current){ Sound.init(); Sound.resume(); show(s); }
+});
 
 /* ---- ほぞん（リロードしても きえないように） ---- */
 const Store = {
@@ -1580,7 +1609,7 @@ function boot(){
   Quiz.reset();
   Vote.enter();
   Top.refresh();
-  show("top");
+  show(screenFromHash() || "top");
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
 else boot();
