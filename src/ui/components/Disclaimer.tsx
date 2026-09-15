@@ -48,7 +48,7 @@ export function DemoBanner({ meta }: { meta: DataMeta }) {
       <span aria-hidden="true">⚠</span>
       <span>
         <strong>デモ表示中：</strong>
-        画面上の株価・財務数値はすべて<strong>UI確認用のサンプル</strong>で、実在企業の実際の数値ではありません。投資判断には使用できません。
+        株価・財務数値はすべて<strong>サンプル</strong>です（実在企業の実際の数値ではありません）。投資判断には使えません。
       </span>
     </div>
   );

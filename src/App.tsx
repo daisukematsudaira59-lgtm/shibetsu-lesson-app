@@ -70,6 +70,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <div className="topbar">
       <header className="appbar">
         {!isTop && (
           <button className="back" onClick={() => window.history.back()} aria-label="戻る">
@@ -95,6 +96,7 @@ export default function App() {
       </header>
 
       <DemoBanner meta={provider.meta} />
+      </div>
 
       {route.name === 'home' && <HomeScreen onOpen={openStock} onSearch={() => go('search')} />}
       {route.name === 'search' && <SearchScreen onOpen={openStock} />}

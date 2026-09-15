@@ -38,6 +38,10 @@
 
 * { box-sizing: border-box; }
 
+/* 埋め込み先（アーティファクト等）がルート要素にセーフエリア余白を付ける場合があるため無効化する。
+   ノッチ対応はヘッダー／タブバー側で個別に行っている。 */
+:root { padding: 0 !important; }
+
 html, body, #root { height: 100%; }
 
 body {
@@ -63,10 +67,14 @@ button { font: inherit; color: inherit; }
   position: relative;
 }
 
-.appbar {
+/* ヘッダーとデモ警告は常に画面上部に出し続ける（警告を見落とさせない） */
+.topbar {
   position: sticky;
   top: 0;
   z-index: 20;
+}
+
+.appbar {
   background: var(--brand);
   color: var(--brand-ink);
   padding: 12px 16px;
@@ -74,6 +82,7 @@ button { font: inherit; color: inherit; }
   align-items: center;
   gap: 12px;
 }
+.appbar { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
 .appbar h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: 0.02em; }
 .appbar .sub { font-size: 11px; opacity: 0.85; margin: 0; line-height: 1.4; }
 .appbar .spacer { flex: 1; }

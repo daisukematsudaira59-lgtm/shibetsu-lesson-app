@@ -11,14 +11,47 @@
 
 ---
 
-## 使い方
+## 起動方法
+
+### A. 携帯からいつでも見る（公開URL）
+
+すでに公開済みのURLをスマホのブラウザで開くだけです。パソコンを起動する必要はありません。
+
+> https://claude.ai/artifact/H2vQS9dabqf6NqUE9H4r7W
+
+- 自分だけが見られる状態（非公開）で公開されています。他の人に見せたい場合のみ、ページの共有メニューから共有してください。
+- iPhone（Safari）なら「共有 → ホーム画面に追加」、Android（Chrome）なら「︙ → ホーム画面に追加」で、アプリのようにアイコンから起動できます。
+
+コードを直したあと、この公開URLを最新版に差し替える手順：
 
 ```bash
-npm install
-npm run dev      # 開発サーバー（http://localhost:5173）
-npm run build    # 本番ビルド
-npm run preview  # ビルド結果の確認
+npm run build
 ```
+
+そのうえで Claude に「アーティファクトを更新して」と伝えると、同じURLのまま中身が入れ替わります（URLは変わりません）。
+
+### B. パソコンで開発する
+
+```bash
+npm install      # 最初の1回だけ
+npm run dev      # 開発サーバー起動 → http://localhost:5173
+```
+
+`npm run dev` を実行したままコードを保存すると、ブラウザが自動で更新されます。止めるときは `Ctrl + C`。
+
+```bash
+npm run build    # 本番用にビルド（dist/ が出力される）
+npm run preview  # ビルド結果をローカルで確認
+```
+
+### C. 同じWi-Fiにいる携帯から開発中の画面を見る
+
+```bash
+npm run dev -- --host
+```
+
+表示された `Network:` の URL（例 `http://192.168.1.5:5173`）を携帯のブラウザに入力します。
+パソコンの `npm run dev` を止めると見られなくなるため、常時使うなら A の公開URLを使ってください。
 
 スマートフォン幅（390px 前後）を基準に設計しています。PC でも表示できます。
 
