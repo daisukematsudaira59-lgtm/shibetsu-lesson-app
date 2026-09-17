@@ -305,3 +305,152 @@ export function buildBudgetPicks(stocks: Stock[], budget: number): BudgetPick[] 
       };
     });
 }
+
+export interface BudgetPlanLine {
+  analysis: StockAnalysis;
+  style: BudgetStyle;
+  shares: number;
+  cost: number;
+  /** 年間の予想配当（株数 × 1株配当）。取得できない場合 undefined */
+  annualDividend?: number;
+  /** この銘柄がプラン全体に占める割合 */
+  weightPct: number;
+}
+
+export interface BudgetPlan {
+  key: 'diversified' | 'dividend' | 'growth' | 'stable';
+  title: string;
+  description: string;
+  lines: BudgetPlanLine[];
+  total: number;
+  remaining: number;
+  annualDividend: number;
+  /** 偏りなどの注意 */
+  warnings: string[];
+  /** 何を基準に選んだか */
+  criteria: string;
+}
+
+function allocate(
+  candidates: StockAnalysis[],
+  budget: number,
+  slots: number,
+  styleOf: (a: StockAnalysis) => BudgetStyle
+): Omit<BudgetPlan, 'key' | 'title' | 'description' | 'criteria'> {
+  const perSlot = budget / slots;
+  const lines: BudgetPlanLine[] = [];
+  for (const a of candidates) {
+    if (lines.length >= slots) break;
+    const shares = Math.floor(perSlot / a.stock.quote.price);
+    if (shares <= 0) continue;
+    const cost = Math.round(shares * a.stock.quote.price);
+    const dps = a.stock.dividend.perShare;
+    lines.push({
+      analysis: a,
+      style: styleOf(a),
+      shares,
+      cost,
+      annualDividend: dps !== undefined ? Math.round(shares * dps) : undefined,
+      weightPct: 0,
+    });
+  }
+  const total = lines.reduce((s, l) => s + l.cost, 0);
+  for (const l of lines) l.weightPct = total > 0 ? Math.round((l.cost / total) * 100) : 0;
+
+  const warnings: string[] = [];
+  const sectors = new Map<string, number>();
+  for (const l of lines) sectors.set(l.analysis.stock.sector, (sectors.get(l.analysis.stock.sector) ?? 0) + 1);
+  for (const [sec, n] of sectors) if (n >= 2) warnings.push(`「${sec}」の銘柄が${n}つ入っています。同じ業種は同じ理由で一緒に下がることがあります。`);
+  const heavy = lines.find((l) => l.weightPct >= 50);
+  if (heavy && lines.length > 1) warnings.push(`${heavy.analysis.stock.name}だけで全体の${heavy.weightPct}%を占めています。1銘柄への集中は値動きの影響を大きくします。`);
+  if (lines.length === 1) warnings.push('1銘柄だけのプランです。この銘柄が下がると資産全体が下がります。');
+  if (lines.length === 0) warnings.push('この予算では条件に合う銘柄を組み合わせられませんでした。');
+  const highWarn = lines.filter((l) => l.analysis.warnings.some((w) => w.level === 'high'));
+  for (const l of highWarn) warnings.push(`${l.analysis.stock.name}には重要度の高い注意点があります（${l.analysis.warnings[0].title}）。`);
+
+  return {
+    lines,
+    total,
+    remaining: budget - total,
+    annualDividend: lines.reduce((s, l) => s + (l.annualDividend ?? 0), 0),
+    warnings,
+  };
+}
+
+/**
+ * 「この予算ならこう分ける」という組み合わせの例（要件11の発展）。
+ * 「買うべき銘柄」ではなく、分散のしかたを具体的な株数で見せるためのもの。
+ */
+export function buildBudgetPlans(stocks: Stock[], budget: number): BudgetPlan[] {
+  const all = stocks
+    .map(analyze)
+    .filter((a) => a.total.score !== null && a.stock.quote.price <= budget / 2);
+
+  const styleOf = (a: StockAnalysis): BudgetStyle => {
+    const g = ratio(a, 'growth');
+    const v = ratio(a, 'valuation');
+    const y = a.stock.dividend.yield ?? 0;
+    if (y >= 3.2) return '配当型';
+    if (g >= 0.7 && v < 0.6) return '成長型';
+    if (v >= 0.65) return '割安型';
+    return '安定型';
+  };
+  const byScore = [...all].sort((a, b) => (b.total.score ?? 0) - (a.total.score ?? 0));
+
+  // 分散：総合スコア順に、業種が重ならないよう4銘柄
+  const diversified: StockAnalysis[] = [];
+  const usedSectors = new Set<string>();
+  for (const a of byScore) {
+    if (usedSectors.has(a.stock.sector)) continue;
+    diversified.push(a);
+    usedSectors.add(a.stock.sector);
+  }
+
+  const dividend = byScore.filter((a) => (a.stock.dividend.yield ?? 0) >= 3.2 && (a.stock.dividend.payoutRatio ?? 0) < 100)
+    .sort((a, b) => ratio(b, 'dividend') - ratio(a, 'dividend'));
+  const growth = byScore
+    .filter((a) => styleOf(a) === '成長型' && ratio(a, 'earnings') >= 0.6)
+    .sort((a, b) => ratio(b, 'growth') - ratio(a, 'growth'));
+  // 安定：財務が堅く、値動きが穏やかで、成長期待で株価が高くなっている銘柄は除く
+  const stable = byScore
+    .filter(
+      (a) =>
+        ratio(a, 'financial') >= 0.7 &&
+        Math.abs(a.technical?.change20d ?? 0) < 8 &&
+        styleOf(a) !== '成長型' &&
+        (a.stock.valuation.forwardPer ?? 99) <= 25 &&
+        a.stock.sizeClass === 'large'
+    )
+    .sort((a, b) => ratio(b, 'financial') - ratio(a, 'financial'));
+
+  return [
+    {
+      key: 'diversified',
+      title: '分散プラン（業種をばらす）',
+      description: '総合スコアの高い銘柄を、業種が重ならないように4つ選び、予算を4等分しています。初心者に最も一般的な考え方です。',
+      criteria: '総合スコア順・業種重複なし・予算を均等配分',
+      ...allocate(diversified, budget, 4, styleOf),
+    },
+    {
+      key: 'dividend',
+      title: '配当プラン（受け取りを重視）',
+      description: '配当利回り3.2%以上で、配当性向が無理のない範囲の銘柄から3つ。年間にいくら配当が見込めるかを株数から計算しています。',
+      criteria: '利回り3.2%以上・配当性向100%未満・配当スコア順',
+      ...allocate(dividend, budget, 3, styleOf),
+    },
+    {
+      key: 'growth',
+      title: '成長プラン（値上がりを狙う）',
+      description: '成長性と業績のスコアがともに高い銘柄から3つ。値動きが大きくなりやすいため、損切りの目安を先に決めておくことが特に重要です。',
+      criteria: '成長型（成長性スコア70%以上）・業績スコア60%以上',
+      ...allocate(growth, budget, 3, styleOf),
+    },
+    {
+      key: 'stable',
+      title: '安定プラン（値動きを抑える）',
+      description: '財務が堅く、直近1か月の値動きが穏やかな銘柄から3つ。大きく増えにくいかわりに、大きく減りにくいことを重視しています。',
+      criteria: '財務スコア70%以上・直近1か月の変動8%未満・予想PER25倍以下・大型株・成長型は除外',
+      ...allocate(stable, budget, 3, styleOf),
+    },
+  ];
+}

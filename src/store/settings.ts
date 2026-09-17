@@ -7,9 +7,11 @@ export interface Settings {
   beginnerMode: boolean;
   /** 免責事項に同意済みか */
   disclaimerAccepted: boolean;
+  /** 予算別画面で使う予算（円） */
+  budget: number;
 }
 
-const DEFAULTS: Settings = { beginnerMode: true, disclaimerAccepted: false };
+const DEFAULTS: Settings = { beginnerMode: true, disclaimerAccepted: false, budget: 170000 };
 
 function read(): Settings {
   try {

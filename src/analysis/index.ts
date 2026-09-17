@@ -6,7 +6,7 @@ import { scoreValuation } from './score/valuation';
 import { scoreGrowth } from './score/growth';
 import { scoreDividend } from './score/dividend';
 import { scoreTechnical } from './score/technical';
-import { computeTotal, type TotalScore } from './total';
+import { computeTotal, evidenceStrength, type EvidenceStrength, type TotalScore } from './total';
 import { buildWarnings, type Warning } from './warnings';
 import { buildPriceReference, type PriceReference } from './priceBands';
 import { buildTiming, type TimingAnalysis } from './timing';
@@ -21,6 +21,8 @@ export interface StockAnalysis {
   technical: TechnicalSnapshot | null;
   categories: CategoryScore[];
   total: TotalScore;
+  /** 勝率の代わりに示す「根拠の強さ」 */
+  evidence: EvidenceStrength;
   warnings: Warning[];
   priceReference: PriceReference;
   timing: TimingAnalysis;
@@ -57,6 +59,7 @@ export function analyze(stock: Stock): StockAnalysis {
     technical,
     categories,
     total,
+    evidence: evidenceStrength(total, categories),
     warnings,
     priceReference,
     timing,
@@ -73,7 +76,7 @@ export const categoryOf = (a: StockAnalysis, key: CategoryScore['key']) =>
   a.categories.find((c) => c.key === key);
 
 export type { CategoryScore } from './types';
-export type { TotalScore } from './total';
+export type { TotalScore, EvidenceStrength } from './total';
 export type { Warning } from './warnings';
 export type { PriceReference } from './priceBands';
 export type { TimingAnalysis } from './timing';

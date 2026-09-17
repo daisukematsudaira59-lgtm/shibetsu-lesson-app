@@ -152,3 +152,63 @@ export function computeTotal(s: Stock, categories: CategoryScore[]): TotalScore 
 
   return { score, stars, verdict, verdictLabel: VERDICT_LABEL[verdict], headline, coverage, crossChecks: checks, penalty };
 }
+
+export type EvidenceLevel = '強い' | 'ふつう' | '弱い' | '不足';
+
+export interface EvidenceStrength {
+  level: EvidenceLevel;
+  /** なぜその強さなのか */
+  detail: string;
+  /** 6項目中いくつが良好か */
+  goodCount: number;
+  /** 6項目中いくつが弱いか */
+  weakCount: number;
+}
+
+/**
+ * 「この判断はどれくらい信頼してよいか」。
+ * 将来の勝率ではなく、分析の材料が揃っていて指標どうしが矛盾していないか、
+ * という「根拠の強さ」を示す。勝率は誰にも出せないため、代わりにこれを表示する。
+ */
+export function evidenceStrength(total: TotalScore, categories: CategoryScore[]): EvidenceStrength {
+  const scored = categories.filter((c) => c.score !== null);
+  const ratio = (c: CategoryScore) => (c.score ?? 0) / c.max;
+  const goodCount = scored.filter((c) => ratio(c) >= 0.65).length;
+  const weakCount = scored.filter((c) => ratio(c) <= 0.4).length;
+  const conflicts = total.crossChecks.length;
+  const coveragePct = Math.round(total.coverage * 100);
+
+  if (total.score === null) {
+    return {
+      level: '不足',
+      goodCount,
+      weakCount,
+      detail: `評価に必要なデータが揃っていません（取得率 ${coveragePct}%）。判断材料が足りない銘柄は、そもそも検討の対象から外すのが安全です。`,
+    };
+  }
+
+  const base = `6項目中 ${goodCount}項目が良好、${weakCount}項目が弱め。データ取得率 ${coveragePct}%、矛盾する指標の組み合わせ ${conflicts}件。`;
+
+  if (total.coverage >= 0.9 && conflicts === 0 && (goodCount >= 4 || weakCount >= 4)) {
+    return {
+      level: '強い',
+      goodCount,
+      weakCount,
+      detail: `${base}指標の向きが揃っており、分析としてはぶれの少ない結果です。ただし将来を保証するものではありません。`,
+    };
+  }
+  if (total.coverage >= 0.7 && conflicts <= 1 && (goodCount >= 3 || weakCount >= 3)) {
+    return {
+      level: 'ふつう',
+      goodCount,
+      weakCount,
+      detail: `${base}おおむね方向は揃っていますが、一部に気になる点があります。「注意点」を読んだうえで判断してください。`,
+    };
+  }
+  return {
+    level: '弱い',
+    goodCount,
+    weakCount,
+    detail: `${base}良い指標と悪い指標が混在しており、分析だけでは判断が定まりません。初心者が最初に選ぶ銘柄としては難しい部類です。`,
+  };
+}

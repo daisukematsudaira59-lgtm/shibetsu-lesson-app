@@ -9,6 +9,7 @@ import { useSettings } from '../../store/settings';
 import { useStock } from '../useStocks';
 import { Bar, Card, fmtPrice, Modal, Pill, Stars, TermButton } from '../components/basics';
 import { PriceChart } from '../components/PriceChart';
+import { ExitPlanCard } from '../components/ExitPlanCard';
 import { DataStamp, DisclaimerBlock } from '../components/Disclaimer';
 
 const verdictTone = (v: string) =>
@@ -81,7 +82,7 @@ export function StockDetailScreen({ code, onOpenSettings }: { code: string; onOp
     );
 
   const a = analyze(stock);
-  const { total, narrative, priceReference: pr, timing, warnings, preBuy, news, earnings } = a;
+  const { total, evidence, narrative, priceReference: pr, timing, warnings, preBuy, news, earnings } = a;
   const beginner = settings.beginnerMode;
   const up = stock.quote.changePercent > 0;
   const fiveCats = a.categories.filter((c) => c.key !== 'technical');
@@ -142,6 +143,20 @@ export function StockDetailScreen({ code, onOpenSettings }: { code: string; onOp
           </div>
         </div>
         <p style={{ fontSize: 14.5, lineHeight: 1.85, margin: '12px 0 0' }}>{total.headline}</p>
+
+        <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+          <div className="between">
+            <span style={{ fontWeight: 700, fontSize: 14.5 }}>この判断の根拠の強さ</span>
+            <Pill tone={evidence.level === '強い' ? 'good' : evidence.level === 'ふつう' ? 'ok' : evidence.level === '弱い' ? 'watch' : 'na'}>
+              {evidence.level}
+            </Pill>
+          </div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.8, color: 'var(--ink-2)', marginTop: 4 }}>{evidence.detail}</div>
+          <div className="muted" style={{ marginTop: 6 }}>
+            「勝率」は誰にも計算できないため表示しません。代わりに、材料が揃っていて指標どうしが矛盾していないかを示しています。
+          </div>
+        </div>
+
         <div className="note" style={{ marginTop: 12 }}>
           点数が高いほど「調べる価値がある」という意味であり、<strong>必ず儲かるという意味ではありません。</strong>
           点数は公開データを一定のルールで機械的に集計したものです。
@@ -331,6 +346,9 @@ export function StockDetailScreen({ code, onOpenSettings }: { code: string; onOp
         ))}
         <div className="note" style={{ marginTop: 12 }}>{timing.disclaimer}</div>
       </Card>
+
+      {/* 売り時の目安 */}
+      <ExitPlanCard stock={stock} />
 
       {/* この株を買うなら何を見る？ */}
       <Card>

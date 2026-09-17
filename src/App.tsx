@@ -25,7 +25,7 @@ const TABS = [
   { name: 'home', label: 'ホーム', icon: '🏠' },
   { name: 'search', label: 'さがす', icon: '🔍' },
   { name: 'ranking', label: 'ランキング', icon: '📊' },
-  { name: 'budget', label: '予算別', icon: '💴' },
+  { name: 'budget', label: '予算', icon: '💴' },
   { name: 'favorites', label: 'お気に入り', icon: '★' },
 ] as const;
 
@@ -41,7 +41,7 @@ const TITLES: Record<Route['name'], string> = {
   home: APP_CONFIG.name,
   search: '銘柄をさがす',
   ranking: 'ランキング',
-  budget: '少額投資モード',
+  budget: '予算から考える',
   favorites: 'お気に入り',
   about: '設定・このアプリについて',
   stock: '銘柄分析',
