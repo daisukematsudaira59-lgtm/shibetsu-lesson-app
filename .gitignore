@@ -4,3 +4,7 @@ dist-ssr
 *.local
 .DS_Store
 .vite
+
+# 認証情報と取得した実データ（各自のPCで npm run fetch-data により生成）
+.env
+src/data/snapshot/stocks.json
