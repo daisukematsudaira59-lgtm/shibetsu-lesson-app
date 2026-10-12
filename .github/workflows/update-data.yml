@@ -8,7 +8,7 @@ on:
     branches: [claude/stock-investment-beginner-app-dbdih3, main, master]
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -28,6 +28,13 @@ jobs:
       - run: npm ci
       - name: 実データを取得（登録不要・Yahoo Finance）
         run: npm run fetch-data
+      - name: 取得した実データをリポジトリに保存（Claude側で同じURLを更新するため）
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f src/data/snapshot/stocks.json
+          git commit -m "実データを更新 $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]" || echo "変更なし"
+          git push
       - name: ビルド
         run: npm run build
       - uses: actions/upload-pages-artifact@v3
