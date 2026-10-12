@@ -39,6 +39,23 @@ const fiscalLabel = (date) => {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------- 取得 ----------
+/** Yahoo は短時間に続けて呼ぶと 429（Too Many Requests）を返す。待ってから再試行する。 */
+async function withRetry(fn, tries = 4) {
+  let wait = 15000;
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const msg = String(e?.message ?? e);
+      const rateLimited = /Too Many Requests|429|rate/i.test(msg);
+      if (!rateLimited || i >= tries) throw e;
+      process.stdout.write(`（混雑のため ${wait / 1000}秒 待機）`);
+      await sleep(wait);
+      wait *= 2;
+    }
+  }
+}
+
 async function fetchRaw(code, yf) {
   const symbol = `${code}.T`;
   const period2 = new Date();
@@ -278,20 +295,20 @@ async function main() {
     const raw = JSON.parse(await readFile(path.join(__dirname, 'fixtures/yahoo-sample.json'), 'utf8'));
     stocks.push(normalize('7203', raw, metaAll['7203'], fetchedAt));
   } else {
-    const { default: yf } = await import('yahoo-finance2');
-    yf.suppressNotices?.(['yahooSurvey', 'ripHistorical']);
+    const { default: YahooFinance } = await import('yahoo-finance2');
+    const yf = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
     console.log(`Yahoo Finance から ${codes.length} 銘柄を取得します（登録不要・約20分遅れ）…`);
     for (const code of codes) {
       process.stdout.write(`  ${code} … `);
       try {
-        const raw = await fetchRaw(code, yf);
+        const raw = await withRetry(() => fetchRaw(code, yf));
         const s = normalize(code, raw, metaAll[code], fetchedAt);
         stocks.push(s);
         console.log(`${s.name} ${s.quote.price}円  PER ${s.valuation.forwardPer ?? '-'}  利回り ${s.dividend.yield ?? '-'}%`);
       } catch (e) {
         console.log(`スキップ: ${e.message}`);
       }
-      await sleep(500);
+      await sleep(1500);
     }
   }
   if (stocks.length === 0) throw new Error('1銘柄も取得できませんでした。');
