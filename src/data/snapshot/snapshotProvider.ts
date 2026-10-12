@@ -2,7 +2,7 @@ import type { DataMeta, Stock } from '../../types/stock';
 import type { SearchHit, StockDataProvider } from '../provider';
 
 /**
- * scripts/fetch-snapshot.mjs が書き出した実データ（stocks.json）を読むプロバイダ。
+ * scripts/fetch-yahoo.mjs / fetch-snapshot.mjs が書き出した実データ（stocks.json）を読むプロバイダ。
  * ファイルが無ければ `loadSnapshot()` は null を返し、アプリはモックにフォールバックする。
  */
 interface SnapshotFile {
@@ -34,12 +34,13 @@ export class SnapshotStockDataProvider implements StockDataProvider {
     this.stocks = file.stocks;
     const dates = file.stocks.map((s) => s.meta.asOf).sort();
     const newest = dates[dates.length - 1] ?? file.fetchedAt;
+    const first = file.stocks[0]?.meta;
     this.meta = {
-      sourceName: 'J-Quants API（JPX）',
+      sourceName: first?.sourceName ?? '取得データ',
       kind: 'api',
-      asOf: newest,
       isDemo: false,
-      notice: `${file.fetchedAt.slice(0, 16).replace('T', ' ')} に取得したスナップショットです。株価はリアルタイムではありません（無料プランは約12週間遅れ）。`,
+      asOf: newest,
+      notice: `${file.fetchedAt.slice(0, 16).replace('T', ' ')}（UTC）に取得したデータです。リアルタイムではありません。${first?.notice ?? ''}`,
     };
   }
 

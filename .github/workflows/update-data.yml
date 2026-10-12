@@ -1,0 +1,45 @@
+name: 実データを取得して公開
+
+on:
+  schedule:
+    - cron: '0 22 * * 0-4'   # 月〜金 07:00 JST（前日分の終値を取り込む）
+  workflow_dispatch:          # 手動実行（Actions タブの「Run workflow」）
+  push:
+    branches: [claude/stock-investment-beginner-app-dbdih3, main, master]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: 実データを取得（登録不要・Yahoo Finance）
+        run: npm run fetch-data
+      - name: ビルド
+        run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
